@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -13,10 +14,7 @@ import (
 	"github.com/yourorg/swim-signup/internal/models"
 )
 
-const (
-	PracticesTable = "swim-practices"
-	SignupsTable   = "swim-signups"
-)
+const Table = "swim-app"
 
 type Client struct {
 	ddb *dynamodb.Client
@@ -34,12 +32,14 @@ func NewClient(ctx context.Context) (*Client, error) {
 
 // UpsertPractice writes or updates a practice (used when syncing from Google Calendar).
 func (c *Client) UpsertPractice(ctx context.Context, p models.Practice) error {
+	p.PK = p.ID
+	p.SK = models.PracticeSK
 	item, err := attributevalue.MarshalMap(p)
 	if err != nil {
 		return fmt.Errorf("marshal practice: %w", err)
 	}
 	_, err = c.ddb.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName: aws.String(PracticesTable),
+		TableName: aws.String(Table),
 		Item:      item,
 	})
 	return err
@@ -50,12 +50,13 @@ func (c *Client) GetPractices(ctx context.Context) ([]models.Practice, error) {
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	out, err := c.ddb.Scan(ctx, &dynamodb.ScanInput{
-		TableName:        aws.String(PracticesTable),
-		FilterExpression: aws.String("#st >= :now"),
+		TableName:        aws.String(Table),
+		FilterExpression: aws.String("sk = :sk AND #st >= :now"),
 		ExpressionAttributeNames: map[string]string{
 			"#st": "startTime",
 		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":sk":  &types.AttributeValueMemberS{Value: models.PracticeSK},
 			":now": &types.AttributeValueMemberS{Value: now},
 		},
 	})
@@ -73,9 +74,10 @@ func (c *Client) GetPractices(ctx context.Context) ([]models.Practice, error) {
 // GetPractice returns a single practice by ID.
 func (c *Client) GetPractice(ctx context.Context, id string) (*models.Practice, error) {
 	out, err := c.ddb.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(PracticesTable),
+		TableName: aws.String(Table),
 		Key: map[string]types.AttributeValue{
-			"id": &types.AttributeValueMemberS{Value: id},
+			"pk": &types.AttributeValueMemberS{Value: id},
+			"sk": &types.AttributeValueMemberS{Value: models.PracticeSK},
 		},
 	})
 	if err != nil {
@@ -94,9 +96,10 @@ func (c *Client) GetPractice(ctx context.Context, id string) (*models.Practice, 
 // IncrementSignupCount atomically increments or decrements the signup counter.
 func (c *Client) IncrementSignupCount(ctx context.Context, practiceID string, delta int) error {
 	_, err := c.ddb.UpdateItem(ctx, &dynamodb.UpdateItemInput{
-		TableName: aws.String(PracticesTable),
+		TableName: aws.String(Table),
 		Key: map[string]types.AttributeValue{
-			"id": &types.AttributeValueMemberS{Value: practiceID},
+			"pk": &types.AttributeValueMemberS{Value: practiceID},
+			"sk": &types.AttributeValueMemberS{Value: models.PracticeSK},
 		},
 		UpdateExpression: aws.String("SET signupCount = if_not_exists(signupCount, :zero) + :delta"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -112,18 +115,19 @@ func (c *Client) IncrementSignupCount(ctx context.Context, practiceID string, de
 // CreateSignup registers a swimmer for a practice.
 // Returns an error if they're already signed up.
 func (c *Client) CreateSignup(ctx context.Context, s models.Signup) error {
+	s.PK = s.PracticeID
+	s.SK = s.SwimmerEmail
 	item, err := attributevalue.MarshalMap(s)
 	if err != nil {
 		return fmt.Errorf("marshal signup: %w", err)
 	}
 	_, err = c.ddb.PutItem(ctx, &dynamodb.PutItemInput{
-		TableName:           aws.String(SignupsTable),
+		TableName:           aws.String(Table),
 		Item:                item,
-		ConditionExpression: aws.String("attribute_not_exists(practiceId) AND attribute_not_exists(swimmerEmail)"),
+		ConditionExpression: aws.String("attribute_not_exists(pk)"),
 	})
 	if err != nil {
-		var condErr *types.ConditionalCheckFailedException
-		if ok := isConditionFailed(err, condErr); ok {
+		if isConditionFailed(err) {
 			return fmt.Errorf("already_signed_up")
 		}
 		return fmt.Errorf("create signup: %w", err)
@@ -134,10 +138,10 @@ func (c *Client) CreateSignup(ctx context.Context, s models.Signup) error {
 // DeleteSignup removes a swimmer's registration.
 func (c *Client) DeleteSignup(ctx context.Context, practiceID, swimmerEmail string) error {
 	_, err := c.ddb.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName: aws.String(SignupsTable),
+		TableName: aws.String(Table),
 		Key: map[string]types.AttributeValue{
-			"practiceId":   &types.AttributeValueMemberS{Value: practiceID},
-			"swimmerEmail": &types.AttributeValueMemberS{Value: swimmerEmail},
+			"pk": &types.AttributeValueMemberS{Value: practiceID},
+			"sk": &types.AttributeValueMemberS{Value: swimmerEmail},
 		},
 	})
 	return err
@@ -146,10 +150,10 @@ func (c *Client) DeleteSignup(ctx context.Context, practiceID, swimmerEmail stri
 // GetSignup checks if a specific swimmer is signed up for a practice.
 func (c *Client) GetSignup(ctx context.Context, practiceID, swimmerEmail string) (*models.Signup, error) {
 	out, err := c.ddb.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(SignupsTable),
+		TableName: aws.String(Table),
 		Key: map[string]types.AttributeValue{
-			"practiceId":   &types.AttributeValueMemberS{Value: practiceID},
-			"swimmerEmail": &types.AttributeValueMemberS{Value: swimmerEmail},
+			"pk": &types.AttributeValueMemberS{Value: practiceID},
+			"sk": &types.AttributeValueMemberS{Value: swimmerEmail},
 		},
 	})
 	if err != nil {
@@ -168,10 +172,12 @@ func (c *Client) GetSignup(ctx context.Context, practiceID, swimmerEmail string)
 // GetSignupsForPractice returns all signups for a given practice.
 func (c *Client) GetSignupsForPractice(ctx context.Context, practiceID string) ([]models.Signup, error) {
 	out, err := c.ddb.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String(SignupsTable),
-		KeyConditionExpression: aws.String("practiceId = :pid"),
+		TableName:              aws.String(Table),
+		KeyConditionExpression: aws.String("pk = :pk"),
+		FilterExpression:       aws.String("sk <> :practiceSK"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":pid": &types.AttributeValueMemberS{Value: practiceID},
+			":pk":        &types.AttributeValueMemberS{Value: practiceID},
+			":practiceSK": &types.AttributeValueMemberS{Value: models.PracticeSK},
 		},
 	})
 	if err != nil {
@@ -187,7 +193,7 @@ func (c *Client) GetSignupsForPractice(ctx context.Context, practiceID string) (
 // GetSignupsForSwimmer returns all upcoming practices a swimmer is signed up for.
 func (c *Client) GetSignupsForSwimmer(ctx context.Context, swimmerEmail string) ([]models.Signup, error) {
 	out, err := c.ddb.Query(ctx, &dynamodb.QueryInput{
-		TableName:              aws.String(SignupsTable),
+		TableName:              aws.String(Table),
 		IndexName:              aws.String("swimmerEmail-index"),
 		KeyConditionExpression: aws.String("swimmerEmail = :email"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
@@ -204,9 +210,7 @@ func (c *Client) GetSignupsForSwimmer(ctx context.Context, swimmerEmail string) 
 	return signups, nil
 }
 
-func isConditionFailed(err error, target *types.ConditionalCheckFailedException) bool {
-	if err == nil {
-		return false
-	}
-	return err.Error() == "ConditionalCheckFailedException: The conditional request failed"
+func isConditionFailed(err error) bool {
+	var condErr *types.ConditionalCheckFailedException
+	return errors.As(err, &condErr)
 }

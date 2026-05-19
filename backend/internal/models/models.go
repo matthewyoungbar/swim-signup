@@ -2,8 +2,12 @@ package models
 
 import "time"
 
+const PracticeSK = "PRACTICE"
+
 // Practice represents a swim practice fetched from Google Calendar
 type Practice struct {
+	PK          string    `json:"-" dynamodbav:"pk"`
+	SK          string    `json:"-" dynamodbav:"sk"`
 	ID          string    `json:"id" dynamodbav:"id"`
 	Title       string    `json:"title" dynamodbav:"title"`
 	Description string    `json:"description" dynamodbav:"description"`
@@ -12,18 +16,18 @@ type Practice struct {
 	EndTime     time.Time `json:"endTime" dynamodbav:"endTime"`
 	Capacity    int       `json:"capacity" dynamodbav:"capacity"`
 	SignupCount int       `json:"signupCount" dynamodbav:"signupCount"`
-	// TTL for DynamoDB auto-expiry (Unix timestamp)
-	TTL int64 `json:"-" dynamodbav:"ttl"`
+	TTL         int64     `json:"-" dynamodbav:"ttl"`
 }
 
 // Signup represents a swimmer's registration for a practice
 type Signup struct {
-	// Partition key: practiceId, Sort key: swimmerEmail
-	PracticeID  string    `json:"practiceId" dynamodbav:"practiceId"`
-	SwimmerEmail string   `json:"swimmerEmail" dynamodbav:"swimmerEmail"`
-	SwimmerName string    `json:"swimmerName" dynamodbav:"swimmerName"`
+	PK           string    `json:"-" dynamodbav:"pk"`
+	SK           string    `json:"-" dynamodbav:"sk"`
+	PracticeID   string    `json:"practiceId" dynamodbav:"practiceId"`
+	SwimmerEmail string    `json:"swimmerEmail" dynamodbav:"swimmerEmail"`
+	SwimmerName  string    `json:"swimmerName" dynamodbav:"swimmerName"`
 	RegisteredAt time.Time `json:"registeredAt" dynamodbav:"registeredAt"`
-	Notes       string    `json:"notes,omitempty" dynamodbav:"notes,omitempty"`
+	Notes        string    `json:"notes,omitempty" dynamodbav:"notes,omitempty"`
 }
 
 // SignupRequest is the request body for POST /signups
