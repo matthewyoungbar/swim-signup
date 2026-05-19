@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"os"
 
 	"github.com/aws/aws-cdk-go/awscdk/v2"
@@ -122,6 +123,31 @@ func NewSwimStack(scope constructs.Construct, id string, props *SwimStackProps) 
 	return stack
 }
 
+// ensureLambdaZip creates a stub zip when the real binary hasn't been built yet
+// so that CDK can synth and bootstrap without requiring a prior `make build`.
+// The stub is replaced by the real binary when `make build` is run.
+func ensureLambdaZip(path string) {
+	if _, err := os.Stat(path); err == nil {
+		return
+	}
+	f, err := os.Create(path)
+	if err != nil {
+		panic("cannot create stub lambda.zip — check backend/ permissions: " + err.Error())
+	}
+	defer f.Close()
+	w := zip.NewWriter(f)
+	entry, err := w.Create("bootstrap")
+	if err != nil {
+		panic("cannot write stub lambda.zip: " + err.Error())
+	}
+	if _, err := entry.Write([]byte("#!/bin/sh\n")); err != nil {
+		panic("cannot write stub lambda.zip: " + err.Error())
+	}
+	if err := w.Close(); err != nil {
+		panic("cannot close stub lambda.zip: " + err.Error())
+	}
+}
+
 func removalPolicy(env string) awscdk.RemovalPolicy {
 	if env == "prod" {
 		return awscdk.RemovalPolicy_RETAIN
@@ -140,6 +166,8 @@ func main() {
 	if !ok {
 		panic("env context value must be a string")
 	}
+
+	ensureLambdaZip("../backend/lambda.zip")
 
 	NewSwimStack(app, "SwimStack-"+env, &SwimStackProps{
 		StackProps: awscdk.StackProps{},
