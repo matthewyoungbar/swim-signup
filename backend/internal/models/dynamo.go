@@ -4,7 +4,6 @@ import "time"
 
 const PracticeSK = "PRACTICE"
 
-// Practice represents a swim practice fetched from Google Calendar
 type Practice struct {
 	PK          string    `json:"-" dynamodbav:"pk"`
 	SK          string    `json:"-" dynamodbav:"sk"`
@@ -19,7 +18,6 @@ type Practice struct {
 	TTL         int64     `json:"-" dynamodbav:"ttl"`
 }
 
-// Signup represents a swimmer's registration for a practice
 type Signup struct {
 	PK           string    `json:"-" dynamodbav:"pk"`
 	SK           string    `json:"-" dynamodbav:"sk"`
@@ -28,26 +26,4 @@ type Signup struct {
 	SwimmerName  string    `json:"swimmerName" dynamodbav:"swimmerName"`
 	RegisteredAt time.Time `json:"registeredAt" dynamodbav:"registeredAt"`
 	Notes        string    `json:"notes,omitempty" dynamodbav:"notes,omitempty"`
-}
-
-// SignupRequest is the request body for POST /signups
-type SignupRequest struct {
-	PracticeID   string `json:"practiceId"`
-	SwimmerEmail string `json:"swimmerEmail"`
-	SwimmerName  string `json:"swimmerName"`
-	Notes        string `json:"notes,omitempty"`
-}
-
-// APIResponse wraps all API responses
-type APIResponse struct {
-	Success bool        `json:"success"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
-}
-
-// PracticeWithSignups bundles a practice with the current user's signup status
-type PracticeWithSignups struct {
-	Practice
-	IsSignedUp bool     `json:"isSignedUp"`
-	Signups    []Signup `json:"signups,omitempty"` // admin only
 }
