@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudfront"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awscloudfrontorigins"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awsdynamodb"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awsevents"
+	"github.com/aws/aws-cdk-go/awscdk/v2/awseventstargets"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awslambda"
 	"github.com/aws/aws-cdk-go/awscdk/v2/awss3"
 	"github.com/aws/constructs-go/constructs/v10"
@@ -98,6 +100,17 @@ func NewSwimStack(scope constructs.Construct, id string, props *SwimStackProps) 
 		Action:    jsii.String("lambda:InvokeFunction"),
 		FunctionName: fn.FunctionArn(),
 		Principal: jsii.String("*"),
+	})
+
+	// ─── CloudWatch Events (hourly calendar sync) ─────────────────────────────
+
+	awsevents.NewRule(stack, jsii.String("CalendarSyncRule"), &awsevents.RuleProps{
+		RuleName:    jsii.String("swim-calendar-sync" + sfx),
+		Description: jsii.String("Triggers hourly calendar sync"),
+		Schedule:    awsevents.Schedule_Rate(awscdk.Duration_Hours(jsii.Number(1))),
+		Targets: &[]awsevents.IRuleTarget{
+			awseventstargets.NewLambdaFunction(fn, &awseventstargets.LambdaFunctionProps{}),
+		},
 	})
 
 	// ─── S3 (UI) ─────────────────────────────────────────────────────────────

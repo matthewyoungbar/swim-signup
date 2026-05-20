@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -82,7 +83,26 @@ func main() {
 		return
 	}
 
-	lambda.Start(func(ctx context.Context, req LambdaFunctionURLRequest) (LambdaFunctionURLResponse, error) {
+	lambda.Start(func(ctx context.Context, event json.RawMessage) (interface{}, error) {
+		var base struct {
+			Source string `json:"source"`
+		}
+		json.Unmarshal(event, &base) //nolint:errcheck — detection only
+
+		if base.Source == "aws.events" {
+			result, err := h.RunSync(ctx)
+			if err != nil {
+				log.Printf("ERROR scheduled sync: %v", err)
+				return nil, err
+			}
+			log.Printf("Scheduled sync complete: %v", result)
+			return result, nil
+		}
+
+		var req LambdaFunctionURLRequest
+		if err := json.Unmarshal(event, &req); err != nil {
+			return LambdaFunctionURLResponse{StatusCode: 400, Body: `{"success":false,"error":"bad request"}`}, nil
+		}
 		return adaptRequest(h, req), nil
 	})
 }

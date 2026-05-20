@@ -145,19 +145,16 @@ func (h *Handler) listPractices(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, result)
 }
 
-// POST /practices/sync
-func (h *Handler) syncPractices(w http.ResponseWriter, r *http.Request) {
+// RunSync fetches upcoming practices from the calendar and upserts them into the DB.
+// It is called both by the HTTP handler and by the CloudWatch scheduled event handler.
+func (h *Handler) RunSync(ctx context.Context) (map[string]int, error) {
 	if h.cal == nil {
-		jsonError(w, "calendar not configured", http.StatusServiceUnavailable)
-		return
+		return nil, fmt.Errorf("calendar not configured")
 	}
-	ctx := r.Context()
 
 	practices, err := h.cal.FetchUpcomingPractices(ctx, 7)
 	if err != nil {
-		log.Printf("ERROR syncPractices fetch: %v", err)
-		jsonError(w, "failed to fetch from calendar", http.StatusInternalServerError)
-		return
+		return nil, fmt.Errorf("fetch from calendar: %w", err)
 	}
 
 	var synced, failed int
@@ -169,7 +166,22 @@ func (h *Handler) syncPractices(w http.ResponseWriter, r *http.Request) {
 			synced++
 		}
 	}
-	jsonOK(w, map[string]int{"synced": synced, "failed": failed})
+	return map[string]int{"synced": synced, "failed": failed}, nil
+}
+
+// POST /practices/sync
+func (h *Handler) syncPractices(w http.ResponseWriter, r *http.Request) {
+	result, err := h.RunSync(r.Context())
+	if err != nil {
+		log.Printf("ERROR syncPractices: %v", err)
+		if err.Error() == "calendar not configured" {
+			jsonError(w, "calendar not configured", http.StatusServiceUnavailable)
+		} else {
+			jsonError(w, "failed to fetch from calendar", http.StatusInternalServerError)
+		}
+		return
+	}
+	jsonOK(w, result)
 }
 
 // GET /practices/{id}/signups
