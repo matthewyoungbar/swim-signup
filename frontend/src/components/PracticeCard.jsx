@@ -71,6 +71,12 @@ export default function PracticeCard({ practice, onSignup, onCancel, disabled })
               {practice.location}
             </span>
           )}
+          {practice.coachName && (
+            <span className="meta-item">
+              <CoachIcon />
+              {practice.coachName}
+            </span>
+          )}
         </div>
       </div>
 
@@ -113,6 +119,19 @@ function PinIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
       <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+    </svg>
+  )
+}
+
+function CoachIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {/* lanyard ring */}
+      <circle cx="9" cy="7" r="2"/>
+      {/* whistle body — tangent to ring above */}
+      <circle cx="9" cy="14" r="5"/>
+      {/* mouthpiece */}
+      <path d="M14 11h4a2 2 0 0 1 0 6h-4"/>
     </svg>
   )
 }

@@ -3,8 +3,8 @@ package models
 import "time"
 
 const (
-	PracticeSK       = "PRACTICE"
-	UserSK           = "USER"
+	PracticeSK        = "PRACTICE"
+	UserSK            = "USER"
 	WebAuthnSessionSK = "SESSION"
 )
 
@@ -20,6 +20,8 @@ type Practice struct {
 	Capacity    int       `json:"capacity" dynamodbav:"capacity"`
 	SignupCount int       `json:"signupCount" dynamodbav:"signupCount"`
 	Theme       string    `json:"theme,omitempty" dynamodbav:"theme,omitempty"`
+	CoachID     string    `json:"coachId,omitempty" dynamodbav:"coachId,omitempty"`
+	CoachName   string    `json:"coachName,omitempty" dynamodbav:"coachName,omitempty"`
 	TTL         int64     `json:"-" dynamodbav:"ttl"`
 }
 

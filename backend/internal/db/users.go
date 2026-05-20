@@ -54,6 +54,25 @@ func (c *Client) GetUser(ctx context.Context, email string) (*models.User, error
 	return &u, nil
 }
 
+func (c *Client) ListCoaches(ctx context.Context) ([]models.User, error) {
+	out, err := c.ddb.Scan(ctx, &dynamodb.ScanInput{
+		TableName:        aws.String(c.table),
+		FilterExpression: aws.String("sk = :sk AND isCoach = :true"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":sk":   &types.AttributeValueMemberS{Value: models.UserSK},
+			":true": &types.AttributeValueMemberBOOL{Value: true},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scan coaches: %w", err)
+	}
+	var coaches []models.User
+	if err := attributevalue.UnmarshalListOfMaps(out.Items, &coaches); err != nil {
+		return nil, fmt.Errorf("unmarshal coaches: %w", err)
+	}
+	return coaches, nil
+}
+
 func (c *Client) ListUsers(ctx context.Context) ([]models.User, error) {
 	out, err := c.ddb.Scan(ctx, &dynamodb.ScanInput{
 		TableName:        aws.String(c.table),

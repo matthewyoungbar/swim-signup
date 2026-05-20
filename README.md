@@ -8,12 +8,12 @@ A web app that allows swimmers to register for practices and admins to track att
 
 ```
 Frontend (React/Vite)
-  └── S3 static website (swim-signup-ui-{env})
+  └── S3 static website
         └── calls Lambda Function URL
 
 Backend (Go)
-  └── Lambda (swim-signup-api-{env})
-        └── DynamoDB single table (swim-app-{env})
+  └── Lambda
+        └── DynamoDB single table
               pk = entity ID, sk = type discriminator or swimmer email
 
 Calendar sync
@@ -24,8 +24,8 @@ Calendar sync
 
 ## Prerequisites
 
-- Go 1.23+
-- Node.js 18+ and npm
+- Go 1.25+
+- Node.js 22+ and npm
 - AWS CLI v2 — [install guide](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 - AWS CDK CLI — `npm install -g aws-cdk`
 - An AWS account with credentials configured
@@ -42,7 +42,7 @@ aws configure
 # prompts for Access Key ID, Secret Access Key, region (e.g. us-east-1), output format
 ```
 
-> Local dev hits real AWS DynamoDB using these credentials. Make sure the table `swim-app` exists (or deploy the stack first).
+> Local dev hits real AWS DynamoDB using these credentials. Make sure the table exists (or deploy the stack first).
 
 ### 2. Run the backend
 

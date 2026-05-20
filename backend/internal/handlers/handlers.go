@@ -192,8 +192,14 @@ func (h *Handler) RunSync(ctx context.Context) (map[string]int, error) {
 		return nil, fmt.Errorf("fetch from calendar: %w", err)
 	}
 
-	var synced, failed int
+	coachIndex := h.buildCoachIndex(ctx)
+
+	var synced, failed, coachMatched int
 	for _, p := range practices {
+		p.CoachID, p.CoachName = matchCoach(p.Title, coachIndex)
+		if p.CoachID != "" {
+			coachMatched++
+		}
 		if err := h.db.UpsertPractice(ctx, p); err != nil {
 			log.Printf("ERROR upsert practice %s: %v", p.ID, err)
 			failed++
@@ -201,7 +207,70 @@ func (h *Handler) RunSync(ctx context.Context) (map[string]int, error) {
 			synced++
 		}
 	}
-	return map[string]int{"synced": synced, "failed": failed}, nil
+	log.Printf("Sync complete: %d synced, %d coach-matched, %d failed", synced, coachMatched, failed)
+	return map[string]int{"synced": synced, "coachMatched": coachMatched, "failed": failed}, nil
+}
+
+// buildCoachIndex returns a map of lowercase name variants → (email, display name)
+// for every user marked as a coach.
+func (h *Handler) buildCoachIndex(ctx context.Context) map[string][2]string {
+	coaches, err := h.db.ListCoaches(ctx)
+	if err != nil {
+		log.Printf("WARN buildCoachIndex: %v", err)
+		return nil
+	}
+	log.Printf("Coach index: %d coaches loaded", len(coaches))
+	index := make(map[string][2]string, len(coaches)*4)
+	for _, c := range coaches {
+		display := c.FirstName + " " + c.LastName
+		if c.PreferredName != "" {
+			display = c.PreferredName + " " + c.LastName
+		}
+		pk := "USER#" + c.Email
+		entry := [2]string{pk, display}
+		// Register all name forms so partial titles still match.
+		for _, name := range []string{
+			c.FirstName,
+			c.PreferredName,
+			c.FirstName + " " + c.LastName,
+			c.PreferredName + " " + c.LastName,
+		} {
+			if name = strings.TrimSpace(strings.ToLower(name)); name != "" {
+				index[name] = entry
+				log.Printf("Coach index: registered %q → %s", name, pk)
+			}
+		}
+	}
+	return index
+}
+
+// separators covers the hyphen/dash variants commonly produced by calendar apps.
+var separators = []string{" - ", " — ", " – ", " - "} // hyphen, em dash, en dash, figure dash
+
+// matchCoach extracts the coach name from a title of the form "<name> - <location>"
+// and looks it up in the index. Returns empty strings if no match is found.
+func matchCoach(title string, index map[string][2]string) (coachID, coachName string) {
+	if index == nil {
+		return "", ""
+	}
+	var before string
+	var found bool
+	for _, sep := range separators {
+		if before, _, found = strings.Cut(title, sep); found {
+			break
+		}
+	}
+	if !found {
+		log.Printf("Coach match: no separator found in title %q", title)
+		return "", ""
+	}
+	key := strings.ToLower(strings.TrimSpace(before))
+	if entry, ok := index[key]; ok {
+		log.Printf("Coach match: %q → %s", key, entry[0])
+		return entry[0], entry[1]
+	}
+	log.Printf("Coach match: no match for extracted name %q (title: %q)", key, title)
+	return "", ""
 }
 
 // POST /practices/sync
