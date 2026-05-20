@@ -14,7 +14,11 @@ async function request(method, path, body, extraHeaders = {}) {
 
   const res = await fetch(`${BASE_URL}${path}`, opts)
   const json = await res.json()
-  if (!json.success) throw new Error(json.error || 'Request failed')
+  if (!json.success) {
+    const err = new Error(json.error || 'Request failed')
+    err.status = res.status
+    throw err
+  }
   return json.data
 }
 
@@ -36,8 +40,15 @@ export const api = {
   getMySignups: () =>
     request('GET', '/my-signups'),
 
+  listUsers: () =>
+    request('GET', '/users'),
+
+  updateUserRoles: (email, isAdmin, isCoach) =>
+    request('PUT', `/users/${encodeURIComponent(email)}/roles`, { isAdmin, isCoach }),
+
   auth: {
     check:            (email)  => request('GET', `/auth/check?email=${encodeURIComponent(email)}`),
+    me:               ()       => request('GET', '/auth/me'),
     registerBegin:    (data)   => request('POST', '/auth/register/begin', data),
     registerComplete: (data)   => request('POST', '/auth/register/complete', data),
     loginBegin:       (data)   => request('POST', '/auth/login/begin', data),

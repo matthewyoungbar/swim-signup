@@ -49,6 +49,19 @@ func (h *Handler) requireAuth(w http.ResponseWriter, r *http.Request) (string, b
 	return claims.Email, true
 }
 
+func (h *Handler) requireAdmin(w http.ResponseWriter, r *http.Request) (string, bool) {
+	email, ok := h.requireAuth(w, r)
+	if !ok {
+		return "", false
+	}
+	user, err := h.db.GetUser(r.Context(), email)
+	if err != nil || user == nil || !user.IsAdmin {
+		jsonError(w, "forbidden", http.StatusForbidden)
+		return "", false
+	}
+	return email, true
+}
+
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
@@ -79,6 +92,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodPost && path == "/auth/login/complete":
 		h.loginComplete(w, r)
 		return
+	case r.Method == http.MethodGet && path == "/auth/me":
+		h.me(w, r)
+		return
 	}
 
 	// All remaining routes require a valid JWT
@@ -108,9 +124,28 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h.deleteSignup(w, r, practiceID)
 	case r.Method == http.MethodGet && path == "/my-signups":
 		h.mySignups(w, r)
+	case r.Method == http.MethodGet && path == "/users":
+		h.listUsers(w, r)
+	case r.Method == http.MethodPut && strings.HasPrefix(path, "/users/") && strings.HasSuffix(path, "/roles"):
+		target := strings.TrimSuffix(strings.TrimPrefix(path, "/users/"), "/roles")
+		h.updateUserRoles(w, r, target)
 	default:
 		jsonError(w, "not found", http.StatusNotFound)
 	}
+}
+
+// GET /auth/me
+func (h *Handler) me(w http.ResponseWriter, r *http.Request) {
+	email, ok := h.requireAuth(w, r)
+	if !ok {
+		return
+	}
+	user, err := h.db.GetUser(r.Context(), email)
+	if err != nil || user == nil {
+		jsonError(w, "user not found", http.StatusNotFound)
+		return
+	}
+	jsonOK(w, user)
 }
 
 // GET /practices
@@ -295,6 +330,42 @@ func (h *Handler) mySignups(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jsonOK(w, signups)
+}
+
+// GET /users  (admin only)
+func (h *Handler) listUsers(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.requireAdmin(w, r); !ok {
+		return
+	}
+	users, err := h.db.ListUsers(r.Context())
+	if err != nil {
+		log.Printf("ERROR listUsers: %v", err)
+		jsonError(w, "failed to fetch users", http.StatusInternalServerError)
+		return
+	}
+	jsonOK(w, users)
+}
+
+// PUT /users/{email}/roles  (admin only)
+func (h *Handler) updateUserRoles(w http.ResponseWriter, r *http.Request, targetEmail string) {
+	if _, ok := h.requireAdmin(w, r); !ok {
+		return
+	}
+	var req models.UpdateRolesRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "invalid request body", http.StatusBadRequest)
+		return
+	}
+	if err := h.db.UpdateUserRoles(r.Context(), targetEmail, req.IsAdmin, req.IsCoach); err != nil {
+		if err.Error() == "user_not_found" {
+			jsonError(w, "user not found", http.StatusNotFound)
+			return
+		}
+		log.Printf("ERROR updateUserRoles: %v", err)
+		jsonError(w, "failed to update roles", http.StatusInternalServerError)
+		return
+	}
+	jsonOK(w, map[string]string{"message": "roles updated"})
 }
 
 func jsonOK(w http.ResponseWriter, data interface{}) {

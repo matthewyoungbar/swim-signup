@@ -1,7 +1,9 @@
 .idea/
 
-node_modules
+node_modules/
 
 bootstrap
 
 lambda.zip
+
+dist/

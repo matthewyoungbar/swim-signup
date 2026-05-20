@@ -1,17 +1,35 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import PracticeCard from './components/PracticeCard'
 import AuthFlow from './components/AuthFlow'
+import AdminPage from './components/AdminPage'
 import { usePractices } from './hooks/usePractices'
 import { api } from './lib/api'
-import { getStoredUser, clearAuth } from './lib/auth'
+import { getStoredUser, storeAuth, getToken, clearAuth } from './lib/auth'
 
 export default function App() {
   const [user, setUser] = useState(getStoredUser)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState(null)
-  const [tab, setTab] = useState('upcoming') // 'upcoming' | 'mine'
+  const [tab, setTab] = useState('upcoming') // 'upcoming' | 'mine' | 'admin'
 
   const { practices, loading, error, reload } = usePractices()
+
+  // Refresh user profile from the server on every load so role changes
+  // (e.g. isAdmin set in DynamoDB) are picked up without requiring logout.
+  useEffect(() => {
+    if (!getToken()) return
+    api.auth.me().then(freshUser => {
+      setUser(freshUser)
+      storeAuth(getToken(), freshUser)
+    }).catch(err => {
+      // Only force logout when the token is genuinely rejected (401).
+      // Network errors, 500s, etc. leave the cached user intact.
+      if (err.status === 401) {
+        clearAuth()
+        setUser(null)
+      }
+    })
+  }, [])
 
   function handleLogout() {
     setUser(null)
@@ -106,43 +124,57 @@ export default function App() {
             My Signups
             <span className="tab-count">{myPractices.length}</span>
           </button>
+          {user.isAdmin && (
+            <button
+              className={`tab ${tab === 'admin' ? 'active' : ''}`}
+              onClick={() => setTab('admin')}
+            >
+              Admin
+            </button>
+          )}
         </div>
 
-        {loading && (
-          <div className="loading-state">
-            <div className="loading-wave">
-              {[0,1,2,3,4].map(i => <span key={i} style={{ animationDelay: `${i * 0.1}s` }} />)}
+        {tab === 'admin' ? (
+          <AdminPage currentUserEmail={user.email} />
+        ) : (
+          <>
+            {loading && (
+              <div className="loading-state">
+                <div className="loading-wave">
+                  {[0,1,2,3,4].map(i => <span key={i} style={{ animationDelay: `${i * 0.1}s` }} />)}
+                </div>
+                <p>Loading practices…</p>
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="error-state">
+                <p>⚠ {error}</p>
+                <button onClick={reload}>Retry</button>
+              </div>
+            )}
+
+            {!loading && !error && displayedPractices.length === 0 && (
+              <div className="empty-state">
+                {tab === 'mine'
+                  ? <p>You haven't signed up for any practices yet.</p>
+                  : <p>No upcoming practices. Try syncing the calendar.</p>
+                }
+              </div>
+            )}
+
+            <div className="practice-list">
+              {displayedPractices.map(p => (
+                <PracticeCard
+                  key={p.id}
+                  practice={p}
+                  onSignup={handleSignup}
+                  onCancel={handleCancel}
+                />
+              ))}
             </div>
-            <p>Loading practices…</p>
-          </div>
+          </>
         )}
-
-        {error && !loading && (
-          <div className="error-state">
-            <p>⚠ {error}</p>
-            <button onClick={reload}>Retry</button>
-          </div>
-        )}
-
-        {!loading && !error && displayedPractices.length === 0 && (
-          <div className="empty-state">
-            {tab === 'mine'
-              ? <p>You haven't signed up for any practices yet.</p>
-              : <p>No upcoming practices. Try syncing the calendar.</p>
-            }
-          </div>
-        )}
-
-        <div className="practice-list">
-          {displayedPractices.map(p => (
-            <PracticeCard
-              key={p.id}
-              practice={p}
-              onSignup={handleSignup}
-              onCancel={handleCancel}
-            />
-          ))}
-        </div>
       </main>
     </div>
   )

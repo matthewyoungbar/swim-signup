@@ -28,3 +28,8 @@ type PracticeWithSignups struct {
 	IsSignedUp bool     `json:"isSignedUp"`
 	Signups    []Signup `json:"signups,omitempty"`
 }
+
+type UpdateRolesRequest struct {
+	IsAdmin bool `json:"isAdmin"`
+	IsCoach bool `json:"isCoach"`
+}

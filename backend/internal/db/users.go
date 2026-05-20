@@ -54,6 +54,47 @@ func (c *Client) GetUser(ctx context.Context, email string) (*models.User, error
 	return &u, nil
 }
 
+func (c *Client) ListUsers(ctx context.Context) ([]models.User, error) {
+	out, err := c.ddb.Scan(ctx, &dynamodb.ScanInput{
+		TableName:        aws.String(c.table),
+		FilterExpression: aws.String("sk = :sk"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":sk": &types.AttributeValueMemberS{Value: models.UserSK},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scan users: %w", err)
+	}
+	var users []models.User
+	if err := attributevalue.UnmarshalListOfMaps(out.Items, &users); err != nil {
+		return nil, fmt.Errorf("unmarshal users: %w", err)
+	}
+	return users, nil
+}
+
+func (c *Client) UpdateUserRoles(ctx context.Context, email string, isAdmin, isCoach bool) error {
+	_, err := c.ddb.UpdateItem(ctx, &dynamodb.UpdateItemInput{
+		TableName: aws.String(c.table),
+		Key: map[string]types.AttributeValue{
+			"pk": &types.AttributeValueMemberS{Value: "USER#" + email},
+			"sk": &types.AttributeValueMemberS{Value: models.UserSK},
+		},
+		UpdateExpression:    aws.String("SET isAdmin = :admin, isCoach = :coach"),
+		ConditionExpression: aws.String("attribute_exists(pk)"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":admin": &types.AttributeValueMemberBOOL{Value: isAdmin},
+			":coach": &types.AttributeValueMemberBOOL{Value: isCoach},
+		},
+	})
+	if err != nil {
+		if isConditionFailed(err) {
+			return fmt.Errorf("user_not_found")
+		}
+		return fmt.Errorf("update user roles: %w", err)
+	}
+	return nil
+}
+
 func (c *Client) UpdateUserCredentials(ctx context.Context, email, credentialsJSON string) error {
 	_, err := c.ddb.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: aws.String(c.table),
