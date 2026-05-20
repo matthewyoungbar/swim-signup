@@ -63,8 +63,8 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
+          go-version-file: cdk/go.mod
+          cache-dependency-path: cdk/go.sum
 
       - uses: actions/setup-node@v6
         with:
