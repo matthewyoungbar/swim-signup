@@ -51,6 +51,9 @@ func (c *Client) GetUser(ctx context.Context, email string) (*models.User, error
 	if err := attributevalue.UnmarshalMap(out.Item, &u); err != nil {
 		return nil, fmt.Errorf("unmarshal user: %w", err)
 	}
+	if _, exists := out.Item["isActive"]; !exists {
+		u.IsActive = true
+	}
 	return &u, nil
 }
 
@@ -88,21 +91,27 @@ func (c *Client) ListUsers(ctx context.Context) ([]models.User, error) {
 	if err := attributevalue.UnmarshalListOfMaps(out.Items, &users); err != nil {
 		return nil, fmt.Errorf("unmarshal users: %w", err)
 	}
+	for i, item := range out.Items {
+		if _, exists := item["isActive"]; !exists {
+			users[i].IsActive = true
+		}
+	}
 	return users, nil
 }
 
-func (c *Client) UpdateUserRoles(ctx context.Context, email string, isAdmin, isCoach bool) error {
+func (c *Client) UpdateUserRoles(ctx context.Context, email string, isAdmin, isCoach, isActive bool) error {
 	_, err := c.ddb.UpdateItem(ctx, &dynamodb.UpdateItemInput{
 		TableName: aws.String(c.table),
 		Key: map[string]types.AttributeValue{
 			"pk": &types.AttributeValueMemberS{Value: "USER#" + email},
 			"sk": &types.AttributeValueMemberS{Value: models.UserSK},
 		},
-		UpdateExpression:    aws.String("SET isAdmin = :admin, isCoach = :coach"),
+		UpdateExpression:    aws.String("SET isAdmin = :admin, isCoach = :coach, isActive = :active"),
 		ConditionExpression: aws.String("attribute_exists(pk)"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":admin": &types.AttributeValueMemberBOOL{Value: isAdmin},
-			":coach": &types.AttributeValueMemberBOOL{Value: isCoach},
+			":admin":  &types.AttributeValueMemberBOOL{Value: isAdmin},
+			":coach":  &types.AttributeValueMemberBOOL{Value: isCoach},
+			":active": &types.AttributeValueMemberBOOL{Value: isActive},
 		},
 	})
 	if err != nil {

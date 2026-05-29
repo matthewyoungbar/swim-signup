@@ -320,6 +320,10 @@ func (h *Handler) createSignup(w http.ResponseWriter, r *http.Request) {
 		jsonError(w, "user not found", http.StatusNotFound)
 		return
 	}
+	if !user.IsActive {
+		jsonError(w, "your account is not active", http.StatusForbidden)
+		return
+	}
 	swimmerName := user.FirstName + " " + user.LastName
 	if user.PreferredName != "" {
 		swimmerName = user.PreferredName + " " + user.LastName
@@ -425,7 +429,7 @@ func (h *Handler) updateUserRoles(w http.ResponseWriter, r *http.Request, target
 		jsonError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
-	if err := h.db.UpdateUserRoles(r.Context(), targetEmail, req.IsAdmin, req.IsCoach); err != nil {
+	if err := h.db.UpdateUserRoles(r.Context(), targetEmail, req.IsAdmin, req.IsCoach, req.IsActive); err != nil {
 		if err.Error() == "user_not_found" {
 			jsonError(w, "user not found", http.StatusNotFound)
 			return

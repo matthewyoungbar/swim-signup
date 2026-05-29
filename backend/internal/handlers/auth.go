@@ -197,6 +197,7 @@ func (h *Handler) registerComplete(w http.ResponseWriter, r *http.Request) {
 		WebAuthnID:      blob.Profile.WebAuthnID,
 		CredentialsJSON: string(credsJSON),
 		CreatedAt:       time.Now().UTC(),
+		IsActive:        true,
 	}
 	if err := h.db.CreateUser(r.Context(), user); err != nil {
 		log.Printf("ERROR registerComplete CreateUser: %v", err)

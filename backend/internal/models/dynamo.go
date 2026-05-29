@@ -45,6 +45,7 @@ type User struct {
 	Phone           string    `json:"phone,omitempty" dynamodbav:"phone,omitempty"`
 	IsAdmin         bool      `json:"isAdmin" dynamodbav:"isAdmin,omitempty"`
 	IsCoach         bool      `json:"isCoach" dynamodbav:"isCoach,omitempty"`
+	IsActive        bool      `json:"isActive" dynamodbav:"isActive"`
 	WebAuthnID      []byte    `json:"-" dynamodbav:"webAuthnId"`
 	CredentialsJSON string    `json:"-" dynamodbav:"credentials"`
 	CreatedAt       time.Time `json:"createdAt" dynamodbav:"createdAt"`

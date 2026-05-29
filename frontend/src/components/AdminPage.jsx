@@ -25,10 +25,10 @@ export default function AdminPage({ currentUserEmail }) {
   useEffect(() => { load() }, [load])
 
   async function handleToggle(user, field) {
-    const updated = { isAdmin: user.isAdmin, isCoach: user.isCoach, [field]: !user[field] }
+    const updated = { isAdmin: user.isAdmin, isCoach: user.isCoach, isActive: user.isActive, [field]: !user[field] }
     setSaving(s => ({ ...s, [user.email]: true }))
     try {
-      await api.updateUserRoles(user.email, updated.isAdmin, updated.isCoach)
+      await api.updateUserRoles(user.email, updated.isAdmin, updated.isCoach, updated.isActive)
       setUsers(us => us.map(u => u.email === user.email ? { ...u, ...updated } : u))
     } catch (e) {
       alert(`Failed to update ${user.email}: ${e.message}`)
@@ -87,6 +87,7 @@ export default function AdminPage({ currentUserEmail }) {
             <tr>
               <th>Name</th>
               <th>Email</th>
+              <th className="role-col">Active</th>
               <th className="role-col">Admin</th>
               <th className="role-col">Coach</th>
             </tr>
@@ -94,7 +95,7 @@ export default function AdminPage({ currentUserEmail }) {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="admin-no-results">No users match "{query}"</td>
+                <td colSpan={5} className="admin-no-results">No users match "{query}"</td>
               </tr>
             )}
             {filtered.map(u => {
@@ -110,6 +111,15 @@ export default function AdminPage({ currentUserEmail }) {
                     {isSelf && <span className="self-badge">you</span>}
                   </td>
                   <td className="user-email-cell">{u.email}</td>
+                  <td className="role-col">
+                    <RoleToggle
+                      checked={u.isActive}
+                      disabled={busy || isSelf}
+                      title={isSelf ? "Cannot change your own active status" : undefined}
+                      onChange={() => handleToggle(u, 'isActive')}
+                      color="var(--success)"
+                    />
+                  </td>
                   <td className="role-col">
                     <RoleToggle
                       checked={u.isAdmin}

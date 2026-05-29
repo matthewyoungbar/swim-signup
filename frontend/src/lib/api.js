@@ -43,8 +43,8 @@ export const api = {
   listUsers: () =>
     request('GET', '/users'),
 
-  updateUserRoles: (email, isAdmin, isCoach) =>
-    request('PUT', `/users/${encodeURIComponent(email)}/roles`, { isAdmin, isCoach }),
+  updateUserRoles: (email, isAdmin, isCoach, isActive) =>
+    request('PUT', `/users/${encodeURIComponent(email)}/roles`, { isAdmin, isCoach, isActive }),
 
   auth: {
     check:            (email)  => request('GET', `/auth/check?email=${encodeURIComponent(email)}`),

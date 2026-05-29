@@ -143,6 +143,12 @@ export default function App() {
           <AdminPage currentUserEmail={user.email} />
         ) : (
           <>
+            {!user.isActive && (
+              <div className="sync-banner error" style={{ justifyContent: 'center' }}>
+                Your account is not currently active. Contact an admin to sign up for practices.
+              </div>
+            )}
+
             {loading && (
               <div className="loading-state">
                 <div className="loading-wave">
@@ -175,6 +181,7 @@ export default function App() {
                   practice={p}
                   onSignup={handleSignup}
                   onCancel={handleCancel}
+                  disabled={!user.isActive}
                 />
               ))}
             </div>

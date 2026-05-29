@@ -30,6 +30,7 @@ type PracticeWithSignups struct {
 }
 
 type UpdateRolesRequest struct {
-	IsAdmin bool `json:"isAdmin"`
-	IsCoach bool `json:"isCoach"`
+	IsAdmin  bool `json:"isAdmin"`
+	IsCoach  bool `json:"isCoach"`
+	IsActive bool `json:"isActive"`
 }
