@@ -61,7 +61,7 @@ export default function App() {
           <span>SwimSignup</span>
         </Link>
         <div className="header-right">
-          <SyncButton />
+          {user.isAdmin && <SyncButton />}
           <div className="user-pill" onClick={() => navigate('/account')} title="Manage your account">
             <span className="user-avatar">{(user.preferredName || user.firstName || '?')[0].toUpperCase()}</span>
             <span className="user-name">{user.preferredName || user.firstName} {user.lastName}</span>

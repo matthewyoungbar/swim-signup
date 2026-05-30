@@ -9,3 +9,6 @@ lambda.zip
 dist/
 
 *.xlsx
+
+.env
+.env.*

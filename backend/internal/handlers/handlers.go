@@ -109,6 +109,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodGet && path == "/practices":
 		h.listPractices(w, r)
 	case r.Method == http.MethodPost && path == "/practices/sync":
+		if _, ok := h.requireAdmin(w, r); !ok {
+			return
+		}
 		h.syncPractices(w, r)
 	case r.Method == http.MethodGet && strings.HasPrefix(path, "/practices/") && strings.HasSuffix(path, "/signups"):
 		parts := strings.Split(path, "/")
