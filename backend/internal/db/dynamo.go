@@ -76,6 +76,25 @@ func (c *Client) GetPractices(ctx context.Context) ([]models.Practice, error) {
 	return practices, nil
 }
 
+// GetAllPractices returns every practice still in the table (no time filter), for coaches and admins.
+func (c *Client) GetAllPractices(ctx context.Context) ([]models.Practice, error) {
+	out, err := c.ddb.Scan(ctx, &dynamodb.ScanInput{
+		TableName:        aws.String(c.table),
+		FilterExpression: aws.String("sk = :sk"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":sk": &types.AttributeValueMemberS{Value: models.PracticeSK},
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("scan all practices: %w", err)
+	}
+	var practices []models.Practice
+	if err := attributevalue.UnmarshalListOfMaps(out.Items, &practices); err != nil {
+		return nil, fmt.Errorf("unmarshal practices: %w", err)
+	}
+	return practices, nil
+}
+
 // GetPractice returns a single practice by ID.
 func (c *Client) GetPractice(ctx context.Context, id string) (*models.Practice, error) {
 	out, err := c.ddb.GetItem(ctx, &dynamodb.GetItemInput{

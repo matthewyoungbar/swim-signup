@@ -11,6 +11,8 @@ export default defineConfig({
       '/my-signups':'http://localhost:8080',
       '/users':     'http://localhost:8080',
       '/passkeys':  'http://localhost:8080',
+      '/swimmers':  'http://localhost:8080',
+      '/attendance':'http://localhost:8080',
     }
   }
 })

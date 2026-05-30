@@ -7,11 +7,12 @@ const (
 	UserSK            = "USER"
 	WebAuthnSessionSK = "SESSION"
 
-	RecordTypePractice    = "PRACTICE"
-	RecordTypeSignup      = "SIGNUP"
-	RecordTypeUser        = "USER"
-	RecordTypePasskey     = "PASSKEY"
-	RecordTypeWASession   = "WA_SESSION"
+	RecordTypePractice   = "PRACTICE"
+	RecordTypeSignup     = "SIGNUP"
+	RecordTypeUser       = "USER"
+	RecordTypePasskey    = "PASSKEY"
+	RecordTypeWASession  = "WA_SESSION"
+	RecordTypeAttendance = "ATTENDANCE"
 )
 
 type Practice struct {
@@ -71,6 +72,24 @@ type Passkey struct {
 	// Populated after load from CredentialJSON; not stored.
 	ID        string   `json:"id,omitempty" dynamodbav:"-"`
 	Transport []string `json:"transport,omitempty" dynamodbav:"-"`
+}
+
+type AttendeeEntry struct {
+	Email string `json:"email" dynamodbav:"email"`
+	Name  string `json:"name" dynamodbav:"name"`
+}
+
+// Attendance stores who attended a practice.
+// PK = "ATTENDANCE#" + practiceID, SK = "ATTENDANCE"
+type Attendance struct {
+	PK         string          `json:"-" dynamodbav:"pk"`
+	SK         string          `json:"-" dynamodbav:"sk"`
+	RecordType string          `json:"-" dynamodbav:"recordType"`
+	PracticeID string          `json:"practiceId" dynamodbav:"practiceId"`
+	CoachEmail string          `json:"coachEmail" dynamodbav:"coachEmail"`
+	Attendees  []AttendeeEntry `json:"attendees" dynamodbav:"attendees"`
+	Notes      string          `json:"notes,omitempty" dynamodbav:"notes,omitempty"`
+	UpdatedAt  time.Time       `json:"updatedAt" dynamodbav:"updatedAt"`
 }
 
 type WebAuthnSession struct {

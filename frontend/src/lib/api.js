@@ -46,6 +46,11 @@ export const api = {
   updateUserRoles: (email, isAdmin, isCoach, isActive) =>
     request('PUT', `/users/${encodeURIComponent(email)}/roles`, { isAdmin, isCoach, isActive }),
 
+  listSwimmers: () => request('GET', '/swimmers'),
+  getAllPractices: () => request('GET', '/practices/all'),
+  getAttendance: (practiceId) => request('GET', `/attendance/${practiceId}`),
+  saveAttendance: (practiceId, data) => request('PUT', `/attendance/${practiceId}`, data),
+
   listPasskeys: () => request('GET', '/passkeys'),
   addPasskeyBegin: () => request('POST', '/passkeys/add/begin'),
   addPasskeyComplete: (data) => request('POST', '/passkeys/add/complete', data),
