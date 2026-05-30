@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/go-webauthn/webauthn/protocol"
 	walib "github.com/go-webauthn/webauthn/webauthn"
@@ -89,20 +88,17 @@ func (h *Handler) registerBegin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var waID []byte
 	existing, _ := h.db.GetUser(r.Context(), req.Email)
-	if existing != nil {
-		passkeys, _ := h.db.GetPasskeys(r.Context(), existing.WebAuthnID)
-		if len(passkeys) > 0 {
-			jsonError(w, "user already exists", http.StatusConflict)
-			return
-		}
-		// Pre-created user (imported) with no passkey yet — reuse their WebAuthnID.
-		waID = existing.WebAuthnID
-	} else {
-		waID = make([]byte, 16)
-		rand.Read(waID)
+	if existing == nil {
+		jsonError(w, "no account found for this email — contact an admin to be added", http.StatusForbidden)
+		return
 	}
+	passkeys, _ := h.db.GetPasskeys(r.Context(), existing.WebAuthnID)
+	if len(passkeys) > 0 {
+		jsonError(w, "user already exists", http.StatusConflict)
+		return
+	}
+	waID := existing.WebAuthnID
 
 	displayName := req.FirstName + " " + req.LastName
 	if req.PreferredName != "" {
@@ -187,36 +183,19 @@ func (h *Handler) registerComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var responseUser models.User
 	existingUser, _ := h.db.GetUser(r.Context(), blob.Profile.Email)
 	if existingUser == nil {
-		newUser := models.User{
-			Email:         blob.Profile.Email,
-			FirstName:     blob.Profile.FirstName,
-			LastName:      blob.Profile.LastName,
-			PreferredName: blob.Profile.PreferredName,
-			Phone:         blob.Profile.Phone,
-			WebAuthnID:    blob.Profile.WebAuthnID,
-			CreatedAt:     time.Now().UTC(),
-			IsActive:      true,
-		}
-		if err := h.db.CreateUser(r.Context(), newUser); err != nil {
-			log.Printf("ERROR registerComplete CreateUser: %v", err)
-			jsonError(w, "failed to create user", http.StatusInternalServerError)
-			return
-		}
-		responseUser = newUser
-	} else {
-		// Pre-created user completing their passkey setup — update profile with submitted data.
-		h.db.UpdateUserProfile(r.Context(), blob.Profile.Email,
-			blob.Profile.FirstName, blob.Profile.LastName,
-			blob.Profile.PreferredName, blob.Profile.Phone)
-		responseUser = *existingUser
-		responseUser.FirstName = blob.Profile.FirstName
-		responseUser.LastName = blob.Profile.LastName
-		responseUser.PreferredName = blob.Profile.PreferredName
-		responseUser.Phone = blob.Profile.Phone
+		jsonError(w, "account not found", http.StatusNotFound)
+		return
 	}
+	h.db.UpdateUserProfile(r.Context(), blob.Profile.Email,
+		blob.Profile.FirstName, blob.Profile.LastName,
+		blob.Profile.PreferredName, blob.Profile.Phone)
+	responseUser := *existingUser
+	responseUser.FirstName = blob.Profile.FirstName
+	responseUser.LastName = blob.Profile.LastName
+	responseUser.PreferredName = blob.Profile.PreferredName
+	responseUser.Phone = blob.Profile.Phone
 
 	if err := h.db.SavePasskey(r.Context(), blob.Profile.WebAuthnID, blob.Profile.Email, *cred); err != nil {
 		log.Printf("ERROR registerComplete SavePasskey: %v", err)

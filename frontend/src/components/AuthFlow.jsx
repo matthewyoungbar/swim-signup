@@ -39,19 +39,20 @@ export default function AuthFlow({ onAuth }) {
     setStep(STEPS.LOADING)
     try {
       const result = await api.auth.check(trimmed)
-      if (result.exists && result.hasPasskey) {
-        setError('An account with this email already exists. Sign in with your passkey instead.')
+      if (!result.exists) {
+        setError("Your email isn't in our system. Contact an admin to be added.")
+        setStep(STEPS.EMAIL)
+      } else if (result.hasPasskey) {
+        setError('You already have an account. Sign in with your passkey instead.')
         setStep(STEPS.EMAIL)
       } else {
-        // New user, or pre-created account (imported) with no passkey yet.
-        if (result.exists && !result.hasPasskey) {
-          setForm({
-            firstName: result.firstName || '',
-            lastName: result.lastName || '',
-            preferredName: result.preferredName || '',
-            phone: '',
-          })
-        }
+        // Pre-created account — pre-fill with imported data.
+        setForm({
+          firstName: result.firstName || '',
+          lastName: result.lastName || '',
+          preferredName: result.preferredName || '',
+          phone: '',
+        })
         setStep(STEPS.REGISTER)
       }
     } catch (err) {
