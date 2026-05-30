@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import './AdminPage.css'
 import { api } from '../lib/api'
 
 export default function AdminPage({ currentUserEmail }) {

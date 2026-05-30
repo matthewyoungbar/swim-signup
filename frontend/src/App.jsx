@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect } from 'react'
 import { Routes, Route, useNavigate, Link } from 'react-router'
+import './App.css'
 import PracticeCard from './components/PracticeCard'
 import AuthFlow from './components/AuthFlow'
 import AdminPage from './components/AdminPage'

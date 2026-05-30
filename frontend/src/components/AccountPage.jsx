@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import './AccountPage.css'
 import { useNavigate } from 'react-router'
 import { api } from '../lib/api'
 import { performRegistration } from '../lib/auth'

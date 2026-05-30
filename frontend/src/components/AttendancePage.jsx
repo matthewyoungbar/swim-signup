@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react'
+import './AttendancePage.css'
 import { api } from '../lib/api'
 
 function displayName(u) {

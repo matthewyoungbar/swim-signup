@@ -1,0 +1,118 @@
+.app { display: flex; flex-direction: column; min-height: 100vh; }
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+.app-header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,.88);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px; height: 60px;
+  display: flex; align-items: center; justify-content: space-between;
+}
+
+.header-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 1.1rem; font-weight: 600; color: var(--pool);
+  text-decoration: none; cursor: pointer;
+  background: none; border: none; padding: 0; font-family: inherit;
+}
+.header-logo svg { stroke: var(--pool); }
+
+.header-right { display: flex; align-items: center; gap: 12px; }
+
+/* ─── Drawer ─────────────────────────────────────────────────────────────── */
+.drawer-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(13,27,42,.35);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s;
+}
+.drawer-overlay.open { opacity: 1; pointer-events: all; }
+
+.drawer-panel {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 240px; z-index: 201;
+  background: var(--card);
+  box-shadow: 4px 0 32px rgba(0,119,182,.14);
+  transform: translateX(-100%);
+  transition: transform .25s ease;
+  display: flex; flex-direction: column;
+}
+.drawer-panel.open { transform: translateX(0); }
+
+.drawer-brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 18px 14px;
+  font-size: 1rem; font-weight: 600; color: var(--pool);
+  border-bottom: 1px solid var(--border);
+}
+.drawer-brand svg { stroke: var(--pool); }
+
+.drawer-nav { display: flex; flex-direction: column; padding: 10px 8px; gap: 2px; }
+
+.drawer-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 14px; border-radius: 10px;
+  background: none; border: none; font-family: inherit;
+  font-size: .92rem; font-weight: 500; color: var(--text-mid);
+  cursor: pointer; text-align: left; width: 100%;
+  transition: background .15s, color .15s;
+}
+.drawer-item:hover { background: var(--pool-pale); color: var(--pool); }
+.drawer-item svg { stroke: currentColor; flex-shrink: 0; }
+
+/* ─── Sync button & banner ───────────────────────────────────────────────── */
+.sync-btn {
+  background: none; border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 14px; font-size: .82rem; font-family: inherit;
+  color: var(--text-mid); cursor: pointer; transition: all .15s;
+}
+.sync-btn:hover { border-color: var(--pool-mid); color: var(--pool); background: var(--pool-pale); }
+.sync-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+.sync-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 24px; font-size: .85rem;
+}
+.sync-banner.success { background: #d1faf2; color: #007a61; }
+.sync-banner.error   { background: #fde8ea; color: var(--danger); }
+.sync-banner button  { background: none; border: none; cursor: pointer; font-size: 1rem; opacity: .6; }
+
+/* ─── User pill ──────────────────────────────────────────────────────────── */
+.user-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--pool-pale); border-radius: 99px;
+  padding: 5px 14px 5px 5px; cursor: pointer; transition: background .15s;
+}
+.user-pill:hover { background: #b5e6f8; }
+.user-avatar {
+  width: 28px; height: 28px; background: var(--pool); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .78rem; font-weight: 600; color: #fff;
+}
+.user-name { font-size: .85rem; color: var(--text-mid); font-weight: 500; }
+
+/* ─── Main content & tabs ────────────────────────────────────────────────── */
+.main-content {
+  max-width: 760px; width: 100%;
+  margin: 0 auto; padding: 32px 20px 64px;
+}
+
+.tabs {
+  display: flex; gap: 4px;
+  border-bottom: 2px solid var(--border); margin-bottom: 28px;
+}
+.tab {
+  background: none; border: none; font-family: inherit;
+  font-size: .9rem; font-weight: 500; color: var(--text-soft);
+  padding: 10px 16px; cursor: pointer;
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: all .15s; display: flex; align-items: center; gap: 8px;
+}
+.tab:hover { color: var(--pool); }
+.tab.active { color: var(--pool); border-bottom-color: var(--pool); }
+.tab-count {
+  background: var(--pool-pale); color: var(--pool);
+  border-radius: 99px; padding: 1px 8px; font-size: .75rem; font-weight: 600;
+}
+.tab.active .tab-count { background: var(--pool); color: #fff; }

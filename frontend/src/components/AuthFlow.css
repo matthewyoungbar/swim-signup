@@ -1,0 +1,32 @@
+.login-page {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  background: linear-gradient(160deg, var(--pool-pale) 0%, #fff 55%);
+}
+.login-card {
+  background: #fff; border: 1.5px solid var(--border); border-radius: 20px;
+  padding: 40px 36px; width: 100%; max-width: 400px;
+  box-shadow: var(--shadow-lg); text-align: center;
+}
+.login-icon { color: var(--pool); margin-bottom: 16px; }
+.login-card h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+.login-subtitle { font-size: .9rem; color: var(--text-soft); margin-bottom: 28px; }
+
+.login-form { text-align: left; }
+.field { margin-bottom: 16px; }
+.field label { display: block; font-size: .82rem; font-weight: 600; color: var(--text-mid); margin-bottom: 5px; }
+.field input {
+  width: 100%; padding: 10px 14px; border: 1.5px solid var(--border);
+  border-radius: 9px; font-family: inherit; font-size: .95rem; color: var(--text);
+  transition: border-color .15s; outline: none;
+}
+.field input:focus { border-color: var(--pool-mid); }
+.login-error { font-size: .82rem; color: var(--danger); margin-bottom: 12px; }
+
+/* Primary action button — used by AuthFlow, AccountPage, and AttendancePage */
+.login-btn {
+  width: 100%; padding: 12px; background: var(--pool); color: #fff;
+  border: none; border-radius: 10px; font-family: inherit;
+  font-size: 1rem; font-weight: 600; cursor: pointer; transition: background .15s; margin-top: 4px;
+}
+.login-btn:hover { background: var(--lane); }
