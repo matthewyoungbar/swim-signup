@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import './AttendancePage.css'
 import { api } from '../lib/api'
 
@@ -29,6 +29,7 @@ export default function AttendancePage({ user }) {
   const [saving, setSaving]             = useState(false)
   const [saveStatus, setSaveStatus]     = useState(null) // 'saved' | error string
   const [search, setSearch]             = useState('')
+  const skipAutoSaveRef                  = useRef(false)
 
   useEffect(() => {
     Promise.all([api.getAllPractices(), api.listSwimmers()])
@@ -45,6 +46,7 @@ export default function AttendancePage({ user }) {
   }, [user])
 
   const selectPractice = useCallback(async (practice) => {
+    skipAutoSaveRef.current = true
     setSelected(practice)
     setSaveStatus(null)
     setSearch('')
@@ -71,33 +73,41 @@ export default function AttendancePage({ user }) {
     }
   }, [attendeeEmails, trialSwimmers, totalSwimmers])
 
+  useEffect(() => {
+    if (!selected) return
+    if (skipAutoSaveRef.current) {
+      skipAutoSaveRef.current = false
+      return
+    }
+    setSaveStatus(null)
+    const timer = setTimeout(async () => {
+      setSaving(true)
+      try {
+        const attendees = swimmers
+          .filter(s => attendeeEmails.has(s.email))
+          .map(s => ({ email: s.email, name: displayName(s) }))
+        await api.saveAttendance(selected.id, {
+          attendees,
+          notes,
+          totalSwimmers: parseInt(totalSwimmers) || 0,
+          trialSwimmers: parseInt(trialSwimmers) || 0,
+        })
+        setSaveStatus('saved')
+      } catch (e) {
+        setSaveStatus(e.message)
+      } finally {
+        setSaving(false)
+      }
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [attendeeEmails, notes, totalSwimmers, trialSwimmers, selected, swimmers])
+
   function toggleAttendee(email) {
     setAttendeeEmails(prev => {
       const next = new Set(prev)
       next.has(email) ? next.delete(email) : next.add(email)
       return next
     })
-  }
-
-  async function handleSave() {
-    setSaving(true)
-    setSaveStatus(null)
-    try {
-      const attendees = swimmers
-        .filter(s => attendeeEmails.has(s.email))
-        .map(s => ({ email: s.email, name: displayName(s) }))
-      await api.saveAttendance(selected.id, {
-        attendees,
-        notes,
-        totalSwimmers: parseInt(totalSwimmers) || 0,
-        trialSwimmers: parseInt(trialSwimmers) || 0,
-      })
-      setSaveStatus('saved')
-    } catch (e) {
-      setSaveStatus(e.message)
-    } finally {
-      setSaving(false)
-    }
   }
 
   // ── Attendance form ────────────────────────────────────────────────────────
@@ -195,9 +205,7 @@ export default function AttendancePage({ user }) {
             </div>
 
             <div className="att-save-row">
-              <button className="login-btn" style={{ width: 'auto', padding: '10px 28px' }} onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : 'Save attendance'}
-              </button>
+              {saving && <span className="account-muted">Saving…</span>}
               {saveStatus === 'saved' && <span className="att-save-ok">Saved</span>}
               {saveStatus && saveStatus !== 'saved' && <span className="att-save-err">{saveStatus}</span>}
             </div>
