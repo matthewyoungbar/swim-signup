@@ -22,6 +22,8 @@ export default function AttendancePage({ user }) {
   const [selected, setSelected]         = useState(null)
   const [attendeeEmails, setAttendeeEmails] = useState(new Set())
   const [notes, setNotes]               = useState('')
+  const [totalSwimmers, setTotalSwimmers] = useState('0')
+  const [trialSwimmers, setTrialSwimmers] = useState('0')
   const [loading, setLoading]           = useState(true)
   const [loadingAtt, setLoadingAtt]     = useState(false)
   const [saving, setSaving]             = useState(false)
@@ -51,6 +53,8 @@ export default function AttendancePage({ user }) {
       const att = await api.getAttendance(practice.id)
       setAttendeeEmails(new Set((att.attendees || []).map(a => a.email)))
       setNotes(att.notes || '')
+      setTotalSwimmers(att.totalSwimmers ? String(att.totalSwimmers) : String((att.attendees || []).length))
+      setTrialSwimmers(att.trialSwimmers ? String(att.trialSwimmers) : '0')
     } catch {
       setAttendeeEmails(new Set())
       setNotes('')
@@ -58,6 +62,14 @@ export default function AttendancePage({ user }) {
       setLoadingAtt(false)
     }
   }, [])
+
+  useEffect(() => {
+    const total = parseInt(totalSwimmers) || 0
+    const accounted = attendeeEmails.size + (parseInt(trialSwimmers) || 0)
+    if (accounted > total) {
+      setTotalSwimmers(String(accounted))
+    }
+  }, [attendeeEmails, trialSwimmers, totalSwimmers])
 
   function toggleAttendee(email) {
     setAttendeeEmails(prev => {
@@ -74,7 +86,12 @@ export default function AttendancePage({ user }) {
       const attendees = swimmers
         .filter(s => attendeeEmails.has(s.email))
         .map(s => ({ email: s.email, name: displayName(s) }))
-      await api.saveAttendance(selected.id, { attendees, notes })
+      await api.saveAttendance(selected.id, {
+        attendees,
+        notes,
+        totalSwimmers: parseInt(totalSwimmers) || 0,
+        trialSwimmers: parseInt(trialSwimmers) || 0,
+      })
       setSaveStatus('saved')
     } catch (e) {
       setSaveStatus(e.message)
@@ -106,6 +123,38 @@ export default function AttendancePage({ user }) {
           <p className="account-muted">Loading attendance…</p>
         ) : (
           <>
+            <div className="att-section att-headcount-section">
+              <div className="att-headcount-row">
+                <label className="att-headcount-field">
+                  <span className="att-headcount-label">Total swimmers</span>
+                  <input
+                    type="number"
+                    min="0"
+                    className="att-number-input"
+                    value={totalSwimmers}
+                    onChange={e => setTotalSwimmers(e.target.value)}
+                    onBlur={e => { if (e.target.value === '') setTotalSwimmers('0') }}
+                  />
+                </label>
+                <label className="att-headcount-field">
+                  <span className="att-headcount-label">Trial swimmers</span>
+                  <input
+                    type="number"
+                    min="0"
+                    className="att-number-input"
+                    value={trialSwimmers}
+                    onChange={e => setTrialSwimmers(e.target.value)}
+                    onBlur={e => { if (e.target.value === '') setTrialSwimmers('0') }}
+                  />
+                </label>
+                {parseInt(totalSwimmers) > 0 && (
+                  <span className="att-accounted">
+                    {attendeeEmails.size + (parseInt(trialSwimmers) || 0)} / {totalSwimmers} accounted for
+                  </span>
+                )}
+              </div>
+            </div>
+
             <div className="att-section">
               <div className="att-section-header">
                 <span className="att-section-title">Attendance</span>
@@ -128,7 +177,6 @@ export default function AttendancePage({ user }) {
                       onChange={() => toggleAttendee(s.email)}
                     />
                     <span className="att-swimmer-name">{displayName(s)}</span>
-                    <span className="att-swimmer-email">{s.email}</span>
                   </label>
                 ))}
                 {filtered.length === 0 && <p className="account-muted">No swimmers match.</p>}

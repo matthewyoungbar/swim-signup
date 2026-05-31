@@ -82,14 +82,16 @@ type AttendeeEntry struct {
 // Attendance stores who attended a practice.
 // PK = "ATTENDANCE#" + practiceID, SK = "ATTENDANCE"
 type Attendance struct {
-	PK         string          `json:"-" dynamodbav:"pk"`
-	SK         string          `json:"-" dynamodbav:"sk"`
-	RecordType string          `json:"-" dynamodbav:"recordType"`
-	PracticeID string          `json:"practiceId" dynamodbav:"practiceId"`
-	CoachEmail string          `json:"coachEmail" dynamodbav:"coachEmail"`
-	Attendees  []AttendeeEntry `json:"attendees" dynamodbav:"attendees"`
-	Notes      string          `json:"notes,omitempty" dynamodbav:"notes,omitempty"`
-	UpdatedAt  time.Time       `json:"updatedAt" dynamodbav:"updatedAt"`
+	PK            string          `json:"-" dynamodbav:"pk"`
+	SK            string          `json:"-" dynamodbav:"sk"`
+	RecordType    string          `json:"-" dynamodbav:"recordType"`
+	PracticeID    string          `json:"practiceId" dynamodbav:"practiceId"`
+	CoachEmail    string          `json:"coachEmail" dynamodbav:"coachEmail"`
+	Attendees     []AttendeeEntry `json:"attendees" dynamodbav:"attendees"`
+	Notes         string          `json:"notes,omitempty" dynamodbav:"notes,omitempty"`
+	TotalSwimmers int             `json:"totalSwimmers,omitempty" dynamodbav:"totalSwimmers,omitempty"`
+	TrialSwimmers int             `json:"trialSwimmers,omitempty" dynamodbav:"trialSwimmers,omitempty"`
+	UpdatedAt     time.Time       `json:"updatedAt" dynamodbav:"updatedAt"`
 }
 
 type WebAuthnSession struct {

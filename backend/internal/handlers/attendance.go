@@ -88,9 +88,24 @@ func (h *Handler) getAttendance(w http.ResponseWriter, r *http.Request, practice
 		return
 	}
 	if attendance == nil {
-		jsonOK(w, models.Attendance{PracticeID: practiceID, Attendees: []models.AttendeeEntry{}})
-		return
+		attendance = &models.Attendance{PracticeID: practiceID, Attendees: []models.AttendeeEntry{}}
 	}
+
+	// Merge signups so swimmer self-signups appear pre-checked.
+	signups, _ := h.db.GetSignupsForPractice(r.Context(), practiceID)
+	existing := make(map[string]bool, len(attendance.Attendees))
+	for _, a := range attendance.Attendees {
+		existing[a.Email] = true
+	}
+	for _, s := range signups {
+		if !existing[s.SwimmerEmail] {
+			attendance.Attendees = append(attendance.Attendees, models.AttendeeEntry{
+				Email: s.SwimmerEmail,
+				Name:  s.SwimmerName,
+			})
+		}
+	}
+
 	jsonOK(w, attendance)
 }
 
@@ -110,18 +125,22 @@ func (h *Handler) saveAttendance(w http.ResponseWriter, r *http.Request, practic
 		}
 	}
 	var req struct {
-		Attendees []models.AttendeeEntry `json:"attendees"`
-		Notes     string                 `json:"notes"`
+		Attendees     []models.AttendeeEntry `json:"attendees"`
+		Notes         string                 `json:"notes"`
+		TotalSwimmers int                    `json:"totalSwimmers"`
+		TrialSwimmers int                    `json:"trialSwimmers"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		jsonError(w, "invalid request body", http.StatusBadRequest)
 		return
 	}
 	a := models.Attendance{
-		PracticeID: practiceID,
-		CoachEmail: email,
-		Attendees:  req.Attendees,
-		Notes:      req.Notes,
+		PracticeID:    practiceID,
+		CoachEmail:    email,
+		Attendees:     req.Attendees,
+		Notes:         req.Notes,
+		TotalSwimmers: req.TotalSwimmers,
+		TrialSwimmers: req.TrialSwimmers,
 	}
 	if err := h.db.SaveAttendance(r.Context(), a); err != nil {
 		log.Printf("ERROR saveAttendance: %v", err)

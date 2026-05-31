@@ -58,3 +58,17 @@
 .att-save-row { display: flex; align-items: center; gap: 14px; }
 .att-save-ok  { font-size: .85rem; color: var(--success); font-weight: 500; }
 .att-save-err { font-size: .85rem; color: var(--danger); }
+
+.att-headcount-row { display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+.att-headcount-field { display: flex; flex-direction: column; gap: 5px; }
+.att-headcount-label { font-size: .75rem; font-weight: 600; color: var(--text-soft); text-transform: uppercase; letter-spacing: .07em; }
+.att-number-input {
+  width: 72px; border: 1px solid var(--border); border-radius: 8px;
+  padding: 6px 10px; font-size: .95rem; font-family: inherit;
+  color: var(--text); text-align: center; outline: none; background: var(--surface);
+}
+.att-number-input:focus { border-color: var(--pool-mid); }
+.att-accounted {
+  font-size: .9rem; font-weight: 600; color: var(--pool);
+  padding-bottom: 7px;
+}
