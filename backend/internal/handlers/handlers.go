@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -21,13 +22,19 @@ type contextKey string
 const contextKeyEmail contextKey = "email"
 
 type Handler struct {
-	db  *db.Client
-	cal *calendar.Client
-	wa  *walib.WebAuthn
+	db           *db.Client
+	cal          *calendar.Client
+	wa           *walib.WebAuthn
+	originSecret string
 }
 
 func New(dbClient *db.Client, calClient *calendar.Client, wa *walib.WebAuthn) *Handler {
-	return &Handler{db: dbClient, cal: calClient, wa: wa}
+	return &Handler{
+		db:           dbClient,
+		cal:          calClient,
+		wa:           wa,
+		originSecret: os.Getenv("ORIGIN_SECRET"),
+	}
 }
 
 func emailFromCtx(r *http.Request) string {
@@ -63,6 +70,14 @@ func (h *Handler) requireAdmin(w http.ResponseWriter, r *http.Request) (string, 
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Reject requests that didn't come through CloudFront. CloudFront injects
+	// x-origin-secret on every request; direct hits to the Lambda URL won't
+	// have it. Skipped when ORIGIN_SECRET is unset (e.g. local dev).
+	if h.originSecret != "" && r.Header.Get("X-Origin-Secret") != h.originSecret {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")

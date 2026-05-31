@@ -69,6 +69,9 @@ func NewSwimStack(scope constructs.Construct, id string, props *SwimStackProps) 
 	if v := os.Getenv("WEBAUTHN_ORIGIN"); v != "" {
 		lambdaEnv["WEBAUTHN_ORIGIN"] = jsii.String(v)
 	}
+	if v := os.Getenv("ORIGIN_SECRET"); v != "" {
+		lambdaEnv["ORIGIN_SECRET"] = jsii.String(v)
+	}
 
 	fn := awslambda.NewFunction(stack, jsii.String("Api"), &awslambda.FunctionProps{
 		FunctionName: jsii.String("swim-signup-api" + sfx),
@@ -94,12 +97,6 @@ func NewSwimStack(scope constructs.Construct, id string, props *SwimStackProps) 
 		FunctionName:        fn.FunctionArn(),
 		Principal:           jsii.String("*"),
 		FunctionUrlAuthType: jsii.String("NONE"),
-	})
-
-	awslambda.NewCfnPermission(stack, jsii.String("AllowPublicInvoke"), &awslambda.CfnPermissionProps{
-		Action:    jsii.String("lambda:InvokeFunction"),
-		FunctionName: fn.FunctionArn(),
-		Principal: jsii.String("*"),
 	})
 
 	// ─── CloudWatch Events (hourly calendar sync) ─────────────────────────────
@@ -132,6 +129,18 @@ func NewSwimStack(scope constructs.Construct, id string, props *SwimStackProps) 
 
 	// ─── CloudFront ───────────────────────────────────────────────────────────
 
+	// CloudFront injects x-origin-secret on every request to the Lambda origin.
+	// The Lambda handler rejects requests missing this header, so direct hits to
+	// the Lambda URL are blocked. Set ORIGIN_SECRET at deploy time (e.g. openssl rand -hex 32).
+	apiOriginProps := &awscloudfrontorigins.HttpOriginProps{
+		ProtocolPolicy: awscloudfront.OriginProtocolPolicy_HTTPS_ONLY,
+	}
+	if v := os.Getenv("ORIGIN_SECRET"); v != "" {
+		apiOriginProps.CustomHeaders = &map[string]*string{
+			"x-origin-secret": jsii.String(v),
+		}
+	}
+
 	// Extract domain from the Lambda Function URL (https://xxxx.lambda-url.region.on.aws/)
 	lambdaDomain := awscdk.Fn_Select(
 		jsii.Number(0),
@@ -148,16 +157,14 @@ func NewSwimStack(scope constructs.Construct, id string, props *SwimStackProps) 
 		HttpVersion:       awscloudfront.HttpVersion_HTTP2_AND_3,
 		DefaultRootObject: jsii.String("index.html"),
 		DefaultBehavior: &awscloudfront.BehaviorOptions{
-			Origin:               awscloudfrontorigins.NewHttpOrigin(uiBucket.BucketWebsiteDomainName(), &awscloudfrontorigins.HttpOriginProps{
+			Origin: awscloudfrontorigins.NewHttpOrigin(uiBucket.BucketWebsiteDomainName(), &awscloudfrontorigins.HttpOriginProps{
 				ProtocolPolicy: awscloudfront.OriginProtocolPolicy_HTTP_ONLY,
 			}),
 			ViewerProtocolPolicy: awscloudfront.ViewerProtocolPolicy_REDIRECT_TO_HTTPS,
 		},
 		AdditionalBehaviors: &map[string]*awscloudfront.BehaviorOptions{
 			"/api/*": {
-				Origin: awscloudfrontorigins.NewHttpOrigin(lambdaDomain, &awscloudfrontorigins.HttpOriginProps{
-					ProtocolPolicy: awscloudfront.OriginProtocolPolicy_HTTPS_ONLY,
-				}),
+				Origin:               awscloudfrontorigins.NewHttpOrigin(lambdaDomain, apiOriginProps),
 				ViewerProtocolPolicy: awscloudfront.ViewerProtocolPolicy_HTTPS_ONLY,
 				AllowedMethods:       awscloudfront.AllowedMethods_ALLOW_ALL(),
 				CachePolicy:          awscloudfront.CachePolicy_CACHING_DISABLED(),
