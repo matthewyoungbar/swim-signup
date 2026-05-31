@@ -133,3 +133,22 @@
   background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .2s;
 }
 .role-toggle.on .role-toggle-knob { left: 20px; }
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .admin-header { gap: 8px; }
+
+  .admin-search {
+    width: 100%; margin-left: 0; order: 3;
+  }
+  .admin-import-btn { order: 4; width: 100%; text-align: center; }
+
+  /* Hide email column — name is sufficient on small screens */
+  .admin-table th:nth-child(2),
+  .admin-table td:nth-child(2) { display: none; }
+
+  .admin-table th, .admin-table td { padding: 10px 8px; }
+  .role-col { width: 56px; }
+
+  .admin-table-wrap { overflow-x: auto; }
+}

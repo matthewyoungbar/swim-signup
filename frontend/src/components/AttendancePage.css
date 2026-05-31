@@ -72,3 +72,20 @@
   font-size: .9rem; font-weight: 600; color: var(--pool);
   padding-bottom: 7px;
 }
+
+/* ─── Mobile ─────────────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .att-section { padding: 14px 14px; }
+
+  /* Search bar drops to its own full-width row */
+  .att-section-header { flex-wrap: wrap; }
+  .att-search { margin-left: 0; width: 100%; order: 3; }
+
+  /* Email is redundant on small screens — name is enough to identify */
+  .att-swimmer-email { display: none; }
+
+  /* Slightly more breathing room between rows */
+  .att-swimmer-row { padding: 10px 8px; }
+
+  .att-headcount-row { gap: 16px; }
+}

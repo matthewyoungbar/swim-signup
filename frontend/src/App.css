@@ -88,9 +88,17 @@
 .user-avatar {
   width: 28px; height: 28px; background: var(--pool); border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: .78rem; font-weight: 600; color: #fff;
+  font-size: .78rem; font-weight: 600; color: #fff; flex-shrink: 0;
 }
 .user-name { font-size: .85rem; color: var(--text-mid); font-weight: 500; }
+
+/* ─── Mobile header ──────────────────────────────────────────────────────── */
+@media (max-width: 520px) {
+  .app-header { padding: 0 14px; }
+  .user-name { display: none; }
+  .user-pill { padding: 5px; }
+  .sync-btn { padding: 6px 10px; font-size: .78rem; }
+}
 
 /* ─── Main content & tabs ────────────────────────────────────────────────── */
 .main-content {
